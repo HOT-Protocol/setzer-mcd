@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+### setzer -- collateral price feeds
+### Usage: setzer <command> [<args>]
+###    or: setzer <command> --help
+###
+### Setzer: Query USD price feeds
+set -e
+
+if [[ $2 = --help ]]; then
+  exec "${0##*/}" help "$1"
+elif [[ $1 = -* ]] && command -v "${0##*/}-$1" &>/dev/null; then
+  exec "${0##*/}-$1" "${@:2}"
+fi
+
+export SETZER_CACHE=${SETZER_CACHE:-~/.setzer}
+export SETZER_CACHE_EXPIRY=${SETZER_CACHE_EXPIRY:-60}
+export SETZER_TIMEOUT=${SETZER_TIMEOUT:-10}
+export SETZER_MIN_MEDIAN=${SETZER_MIN_MEDIAN:-3}
+
+"${0##*/}-${1-help}" "${@:2}"

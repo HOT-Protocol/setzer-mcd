@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+set -e
+src=$1
+pair=${2/:/}
+
+if [[ ${#2} -eq 6 ]]; then
+  base=${pair:0:3}
+  quote=${pair:3:6}
+else
+  base=${2%:*}
+  quote=${2#*:}
+fi
+
+case $src in
+  balancer) {
+    case "${pair^^}" in
+      BALUSD) {
+        id="0xba100000625a3754423978a60c9317c58a424e3d"
+      };;
+      AAVEUSD) {
+        id="0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
+      };;
+      WNXMUSD) {
+        id="0x0d438f3b5175bebc262bf23753c1e53d03432bde"
+      };;
+    esac
+    json=$(curl \
+      -sS \
+      -X POST \
+      -H "Content-Type: application/json" \
+      --data '{ "query": "query($id:String) { tokenPrices(where: { id: $id }) { symbol price poolLiquidity } }", "variables": { "id": "'"$id"'" } }' \
+      https://api.thegraph.com/subgraphs/name/balancer-labs/balancer)
+    setzer --format "$(jshon <<<"$json" -e data -e tokenPrices -e 0 -e price -u)"
+  };;
+  binance) {
+    json=$(curl -sS "https://www.binance.com/api/v3/ticker/price?symbol=${base^^}${quote^^}")
+    setzer --format "$(jshon <<<"$json" -e price -u)"
+  };;
+  bitfinex) {
+    json=$(curl -sS "https://api.bitfinex.com/v2/ticker/t${base^^}${quote^^}")
+    setzer --format "$(jshon <<<"$json" -e 6)"
+  };;
+  bitstamp) {
+    json=$(curl -sS "https://www.bitstamp.net/api/v2/ticker/${base,,}${quote,,}/")
+    setzer --format "$(jshon <<<"$json" -e last -u)"
+  };;
+  bitthumb) {
+    json=$(curl -sS "https://global-openapi.bithumb.pro/openapi/v1/spot/ticker?symbol=${base^^}-${quote^^}")
+    setzer --format "$(jshon <<<"$json" -e data -e 0 -e c -u)"
+  };;
+  bittrex) {
+    json=$(curl -sS "https://api.bittrex.com/api/v1.1/public/getticker?market=${quote^^}-${base^^}")
+    setzer --format "$(jshon <<<"$json" -e result -e Last -u)"
+  };;
+  cmc) {
+    ticker=$(case "${pair^^}" in
+      USDTUSD) { echo "825";  };;
+      POLYUSD) { echo "2496"; };;
+    esac)
+    json=$(curl -sS -H "X-CMC_PRO_API_KEY:  $CMC_API_KEY" -H "Accept: application/json" -d  "id=$ticker" -G https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest)
+    setzer --format "$(jshon <<<"$json" -e data -e "$ticker" -e quote -e USD -e price -u)"
+  };;
+  coinbase) {
+    json=$(curl -sS "https://api.pro.coinbase.com/products/${base^^}-${quote^^}/ticker")
+    setzer --format "$(jshon <<<"$json" -e price -u)"
+  };;
+  cryptocompare) {
+    json=$(curl -sS "https://min-api.cryptocompare.com/data/price?fsym=${base^^}&tsyms=${quote^^}")
+    setzer --format "$(jshon <<<"$json" -e USD -u)"
+  };;
+  ddex) {
+    json=$(curl -sS "https://api.ddex.io/v4/markets/${base^^}-${quote^^}")
+    setzer --format "$(jshon <<<"$json" -e data -e market -e lastPrice -u)"
+  };;
+  ftx) {
+    json=$(curl -sS "https://ftx.com/api/markets/${base^^}/${quote^^}")
+    setzer --format "$(jshon <<<"$json" -e result -e last -u)"
+  };;
+  fx) {
+    json=$(curl -sS "https://api.exchangeratesapi.io/latest?base=${base^^}")
+    setzer --format "$(jshon <<<"$json" -e rates -e "${quote^^}" -u)"
+  };;
+  gateio) {
+    json=$(curl -sS "https://fx-api.gateio.ws/api/v4/spot/tickers?currency_pair=${base^^}_${quote^^}")
+    setzer --format "$(jshon <<<"$json" -e 0 -e last -u)"
+  };;
+  gemini) {
+    json=$(curl -sS "https://api.gemini.com/v1/pubticker/${base,,}${quote,,}")
+    setzer --format "$(jshon <<<"$json" -e last -u)"
+  };;
+  hitbtc) {
+    json=$(curl -sS "https://api.hitbtc.com/api/2/public/ticker/${base^^}${quote^^}/")
+    setzer --format "$(jshon <<<"$json" -e last -u)"
+  };;
+  huobi) {
+    json=$(curl -sS "https://api.huobi.pro/market/detail/merged?symbol=${base,,}${quote,,}")
+    setzer --format "$(jshon <<<"$json" -e tick -e bid -e 0)"
+  };;
+  kraken) {
+    json=$(curl -sS "https://api.kraken.com/0/public/Ticker?pair=${base^^}${quote^^}")
+    setzer --format "$(jshon <<<"$json" -e result -e "${base^^}${quote^^}" -e c -e 0 -u)"
+  };;
+  kucoin) {
+    json=$(curl -sS "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${base^^}-${quote^^}")
+    setzer --format "$(jshon <<<"$json" -e data -e price -u)"
+  };;
+  kyber) {
+    json=$(curl -sS "https://api.kyber.network/change24h")
+    setzer --format "$(jshon <<<"$json" -e "${quote^^}_${base^^}" -e rate_eth_now -u)"
+  };;
+  okex) {
+    json=$(curl -sS "https://www.okex.com/api/spot/v3/instruments/${base^^}-${quote^^}/ticker")
+    setzer --format "$(jshon <<<"$json" -e last -u)"
+  };;
+  poloniex) {
+    json=$(curl -sS "https://poloniex.com/public?command=returnTicker")
+    setzer --format "$(jshon <<<"$json" -e "${quote^^}"_"${base^^}" -e last -u)"
+  };;
+  sushiswap) {
+    case "${pair^^}" in
+      SNXETH) {
+        id="0xa1d7b2d891e3a1f9ef4bbc5be20630c2feb1c470"
+        select="token1Price"
+      };;
+      CRVETH) {
+        id="0x58dc5a51fe44589beb22e8ce67720b5bc5378009"
+        select="token0Price"
+      };;
+    esac
+    json=$(curl \
+      -sS \
+      -X POST \
+      -H "Content-Type: application/json" \
+      --data '{ "query": "query($id:String) { pairs(where: { id: $id }) { token0Price token1Price } }", "variables": { "id": "'"$id"'" } }' \
+      https://api.thegraph.com/subgraphs/name/zippoxer/sushiswap-subgraph-fork)
+    setzer --format "$(jshon <<<"$json" -e data -e pairs -e 0 -e $select -u)"
+  };;
+  uniswap) {
+    case "${pair^^}" in
+      AAVEETH) {
+        id="0xdfc14d2af169b0d36c4eff567ada9b2e0cae044f"
+        select="token1Price"
+      };;
+      BALETH) {
+        id="0xa70d458a4d9bc0e6571565faee18a48da5c0d593"
+        select="token1Price"
+      };;
+      COMPETH) {
+        id="0xcffdded873554f362ac02f8fb1f02e5ada10516f"
+        select="token1Price"
+      };;
+      ETHUSDC) {
+        id="0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc"
+        select="token0Price"
+      };;
+      KNCETH) {
+        id="0xf49c43ae0faf37217bdcb00df478cf793edd6687"
+        select="token0Price"
+      };;
+      LRCETH) {
+        id="0x8878df9e1a7c87dcbf6d3999d997f262c05d8c70"
+        select="token1Price"
+      };;
+      PAXGETH) {
+        id="0x9c4fe5ffd9a9fc5678cfbd93aa2d4fd684b67c4c"
+        select="token1Price"
+      };;
+      UNIETH) {
+        id="0xd3d2e2692501a5c9ca623199d38826e513033a17"
+        select="token1Price"
+      };;
+      YFIETH) {
+        id="0x2fdbadf3c4d5a8666bc06645b8358ab803996e28"
+        select="token1Price"
+      };;
+      SNXETH) {
+        id="0x43ae24960e5534731fc831386c07755a2dc33d47"
+        select="token1Price"
+      };;
+      CRVETH) {
+        id="0x3da1313ae46132a397d90d95b1424a9a7e3e0fce"
+        select="token0Price"
+      };;
+      WNXMETH) {
+        id="0x23bff8ca20aac06efdf23cee3b8ae296a30dfd27"
+        select="token1Price"
+      }
+    esac
+    json=$(curl \
+      -sS \
+      -X POST \
+      -H "Content-Type: application/json" \
+      --data '{ "query": "query($id:String) { pairs(where: { id: $id }) { token0Price token1Price } }", "variables": { "id": "'"$id"'" } }' \
+      https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2)
+    setzer --format "$(jshon <<<"$json" -e data -e pairs -e 0 -e $select -u)"
+  };;
+  upbit) {
+    json=$(curl -sS "https://api.upbit.com/v1/ticker?markets=${quote^^}-${base^^}")
+    setzer --format "$(jshon <<<"$json" -e 0 -e trade_price)"
+  };;
+  hotdao) {
+    json="$(curl -sS "https://api.hotdao.com/v1/ticker?markets=${quote^^}-${base^^}" -k)"
+    setzer --format "$(jshon <<<"$json" -e 0 -e trade_price)"
+  };;
+  *) {
+    echo >&2 "Error: exchange not recognised: $src"
+  };;
+esac

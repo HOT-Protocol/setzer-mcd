@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+### setzer-sources -- Show price sources for a given asset or pair
+### Usage: setzer sources <pair>
+###
+### Example: setzer sources ETH
+###          setzer sources ETHUSD
+###          setzer sources btcusd
+###
+### See `setzer pairs' for a list of supported pairs
+set -e
+[ $# = 1 ] || setzer --bad-usage "$0"
+setzer price "$1" sources

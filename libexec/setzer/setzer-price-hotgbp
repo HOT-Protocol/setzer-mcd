@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+pair=hotgbp
+sources=(
+  hotdao
+)
+
+case $1 in
+  hotdao) {
+    setzer x-price "$1" hot:gbp
+  };;
+  *) {
+    export SETZER_MIN_MEDIAN=1
+    setzer --price-commands "-$1-" $pair "${sources[@]}"
+  };;
+esac
