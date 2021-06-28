@@ -16,7 +16,7 @@ case $1 in
     setzer x-price kraken xeth:zgbp
   };;
   *) {
-    export SETZER_MIN_MEDIAN=4
+    export SETZER_MIN_MEDIAN=2
     setzer --price-commands "-$1-" $pair "${sources[@]}"
   };;
 esac
